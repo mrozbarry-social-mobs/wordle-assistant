@@ -1,0 +1,15 @@
+{
+  "name": "wordle-assistant",
+  "version": "1.0.0",
+  "description": "5-letter word guessing game assistant",
+  "main": "index.js",
+  "scripts": {
+    "start": "node ./index",
+    "test": "ava"
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "ava": "^4.0.1"
+  }
+}
