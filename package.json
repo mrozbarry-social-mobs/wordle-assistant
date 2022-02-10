@@ -2,7 +2,10 @@
   "name": "wordle-assistant",
   "version": "1.0.0",
   "description": "5-letter word guessing game assistant",
+  "module": true,
+  "type": "module",
   "main": "index.js",
+  "bin": "index.js",
   "scripts": {
     "start": "node ./index",
     "test": "ava"
