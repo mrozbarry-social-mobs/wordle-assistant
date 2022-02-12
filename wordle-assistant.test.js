@@ -20,7 +20,7 @@ test('suggests all words', (t) => {
 
 test('suggests only words that start with b', (t) => {
   const assist = new WordleAssistant(5)
-    .guess(new Guess('bxxxx', 'gdddd'));
+    .guess(new Guess('bxxxx', 'gxxxx'));
 
   t.deepEqual(assist.suggest(dictionary), [
     'banks',
@@ -32,8 +32,8 @@ test('suggests only words that start with b', (t) => {
 
 test('ignores words that have already been guessed and were incorrect', (t) => {
   const assist = new WordleAssistant(5)
-    .guess(new Guess('toast', 'dgggg'))
-    .guess(new Guess('coast', 'dgggg'))
+    .guess(new Guess('toast', 'xgggg'))
+    .guess(new Guess('coast', 'xgggg'))
 
   t.deepEqual(assist.suggest(dictionary), [
     'boast',

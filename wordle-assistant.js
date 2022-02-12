@@ -23,6 +23,11 @@ export class Guess {
       if (this.result[index] !== results.incorrect) return null;
       return letter;
     }).filter(Boolean);
+
+    this.includedLetters = this.word.split('').map((letter, index) => {
+      if (this.result[index] === results.incorrect) return null;
+      return letter;
+    }).filter(Boolean);
   }
 }
 
@@ -31,13 +36,15 @@ Guess.fromArg = (arg) => {
   return new Guess(word, result);
 }
 
+const unique = arr => Array.from(new Set(arr));
+
 export class WordleAssistant {
   constructor(wordSize = 5, carryOver = {}) {
     this.wordSize = wordSize;
     this.wordPartial = carryOver.wordPartial || Array.from({ length: this.wordSize }, () => null);
     this.lettersNotInPosition = carryOver.lettersNotInPosition || Array.from({ length: this.wordSize }, () => []);
-    this.excludedLetters = (carryOver.excludedLetters || []);
-    this.words = carryOver.words || [];
+    this.excludedLetters = unique(carryOver.excludedLetters || []);
+    this.includedLetters = unique(carryOver.includedLetters || []);
     this.guesses = carryOver.guesses || [];
   }
 
@@ -50,21 +57,21 @@ export class WordleAssistant {
         letters.concat(guess.lettersNotInPosition[index]).filter(Boolean)
       ));
 
-    const goodLetters = Array.from(
-      new Set(wordPartial.concat(lettersNotInPosition).filter(Boolean))
-    );
+    const includedLetters = this.includedLetters
+      .concat(guess.includedLetters)
+      .filter(Boolean);
 
-    const excludeLetters = this.excludedLetters
+    const excludedLetters = this.excludedLetters
       .concat(guess.excludedLetters)
-      .filter((letter) => Boolean(letter) && !goodLetters.includes(letter));
+      .filter((letter) => Boolean(letter) && !includedLetters.includes(letter));
 
     return new WordleAssistant(
       this.wordSize,
       {
         wordPartial,
         lettersNotInPosition,
-        excludedLetters: Array.from(new Set(excludeLetters)),
-        words: this.words.concat(guess.word),
+        excludedLetters,
+        includedLetters,
         guesses: this.guesses.concat(guess),
       },
     );
@@ -76,17 +83,22 @@ export class WordleAssistant {
       .filter(this.mustMatchWordPartial.bind(this))
       .filter(this.cannotBeAWordAlreadyGuessed.bind(this))
       .filter(this.cannotHaveExcludedLetters.bind(this))
+      .filter(this.mustHaveAllIncludedLetters.bind(this))
       .filter(this.cannotHaveLettersInIncorrectPositions.bind(this));
   }
 
   cannotBeAWordAlreadyGuessed(word) {
-    return !this.words.includes(word);
+    return !this.guesses.find(g => g.word === word);
   }
 
   mustMatchWordPartial(word) {
     return this.wordPartial.every((letter, index) => (
       letter ? letter === word[index] : true
     ));
+  }
+
+  mustHaveAllIncludedLetters(word) {
+    return this.includedLetters.every((letter) => word.includes(letter));
   }
 
   cannotHaveExcludedLetters(word) {
