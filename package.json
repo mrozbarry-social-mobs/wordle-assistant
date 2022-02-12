@@ -14,5 +14,8 @@
   "license": "ISC",
   "devDependencies": {
     "ava": "^4.0.1"
+  },
+  "dependencies": {
+    "colorette": "^2.0.16"
   }
 }

@@ -1,25 +1,26 @@
+export const results = {
+  correct: 'g',
+  letterExists: 'y',
+  incorrect: 'x',
+};
+
 export class Guess {
   constructor(word, result) {
     this.word = word.toLowerCase();
     this.result = result;
 
-    this.knownPositionLetters = this.word.split('').map((letter, index) => {
-      if (this.result[index] !== 'g') return null;
+    this.wordPartial = this.word.split('').map((letter, index) => {
+      if (this.result[index] !== results.correct) return null;
       return letter;
     });
 
-    this.knownMispositionLetters = this.word.split('').map((letter, index) => {
-      if (this.result[index] !== 'y') return null;
+    this.lettersNotInPosition = this.word.split('').map((letter, index) => {
+      if (this.result[index] === results.correct) return null;
       return letter;
     });
 
-    this.knownIncludedLetters = this.word.split('').map((letter, index) => {
-      if (this.result[index] === 'd') return null;
-      return letter;
-    }).filter(Boolean);
-
-    this.knownExcludedLetters = this.word.split('').map((letter, index) => {
-      if (this.result[index] !== 'd') return null;
+    this.excludedLetters = this.word.split('').map((letter, index) => {
+      if (this.result[index] !== results.incorrect) return null;
       return letter;
     }).filter(Boolean);
   }
@@ -31,51 +32,72 @@ Guess.fromArg = (arg) => {
 }
 
 export class WordleAssistant {
-  constructor(wordSize = 5, carryOver = {}, guesses = 0) {
+  constructor(wordSize = 5, carryOver = {}) {
     this.wordSize = wordSize;
-    this.knownPositionLetters = carryOver.knownPositionLetters || Array.from({ length: this.wordSize }, () => null);
-    this.knownMispositionLetters = carryOver.knownMispositionLetters || Array.from({ length: this.wordSize }, () => []);
-    this.knownIncludedLetters = carryOver.knownIncludedLetters || [];
-    this.knownExcludedLetters = (carryOver.knownExcludedLetters || []).filter;
+    this.wordPartial = carryOver.wordPartial || Array.from({ length: this.wordSize }, () => null);
+    this.lettersNotInPosition = carryOver.lettersNotInPosition || Array.from({ length: this.wordSize }, () => []);
+    this.excludedLetters = (carryOver.excludedLetters || []);
     this.words = carryOver.words || [];
-    this.guesses = guesses;
+    this.guesses = carryOver.guesses || [];
   }
 
   guess(guess) {
+    const wordPartial = this.wordPartial
+      .map((kpl, index) => guess.wordPartial[index] || kpl);
+
+    const lettersNotInPosition = this.lettersNotInPosition
+      .map((letters, index) => (
+        letters.concat(guess.lettersNotInPosition[index]).filter(Boolean)
+      ));
+
+    const goodLetters = Array.from(
+      new Set(wordPartial.concat(lettersNotInPosition).filter(Boolean))
+    );
+
+    const excludeLetters = this.excludedLetters
+      .concat(guess.excludedLetters)
+      .filter((letter) => Boolean(letter) && !goodLetters.includes(letter));
+
     return new WordleAssistant(
       this.wordSize,
       {
-        knownPositionLetters: this.knownPositionLetters.map((kpl, index) => guess.knownPositionLetters[index] || kpl),
-        knownMispositionLetters: this.knownMispositionLetters.map((letters, index) => letters.concat(guess.knownMispositionLetters[index]).filter(Boolean)),
-        knownIncludedLetters: Array.from(new Set(this.knownIncludedLetters.concat(guess.knownIncludedLetters))),
-        knownExcludedLetters: Array.from(new Set(this.knownExcludedLetters.concat(guess.knownExcludedLetters))),
+        wordPartial,
+        lettersNotInPosition,
+        excludedLetters: Array.from(new Set(excludeLetters)),
         words: this.words.concat(guess.word),
+        guesses: this.guesses.concat(guess),
       },
-      this.guesses + 1,
     );
   }
 
   suggest(dictionary) {
-    const list = dictionary
+    return dictionary
       .map(word => word.toLowerCase())
-      .filter(this.filterWithKnownPositionLetters.bind(this))
-      .filter(this.filterWithLetters.bind(this))
-      .filter(this.filterWithMispositionedLetters.bind(this));
-
-    return list.slice(0, 20);
+      .filter(this.mustMatchWordPartial.bind(this))
+      .filter(this.cannotBeAWordAlreadyGuessed.bind(this))
+      .filter(this.cannotHaveExcludedLetters.bind(this))
+      .filter(this.cannotHaveLettersInIncorrectPositions.bind(this));
   }
 
-  filterWithKnownPositionLetters(word) {
-    return this.knownPositionLetters.every((letter, index) => letter ? letter === word[index] : true);
+  cannotBeAWordAlreadyGuessed(word) {
+    return !this.words.includes(word);
   }
 
-  filterWithLetters(word) {
-    const containsIncludedLetters = this.knownIncludedLetters.every((letter) => word.includes(letter));
-    const containsExcludedLetters = this.knownExcludedLetters.some((letter) => word.includes(letter));
-    return containsIncludedLetters && !containsExcludedLetters;
+  mustMatchWordPartial(word) {
+    return this.wordPartial.every((letter, index) => (
+      letter ? letter === word[index] : true
+    ));
   }
 
-  filterWithMispositionedLetters(word) {
-    return this.knownPositionLetters.some((letter, index) => letter ? letter !== word[index] : true);
+  cannotHaveExcludedLetters(word) {
+    return !this.excludedLetters.some((letter) => word.includes(letter));
+  }
+
+  cannotHaveLettersInIncorrectPositions(word) {
+    return !this.lettersNotInPosition.some((letters, index) => {
+      return letters.length > 0
+        ? letters.includes(word[index])
+        : false
+    });
   }
 }
