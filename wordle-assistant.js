@@ -65,6 +65,8 @@ export class WordleAssistant {
       .concat(guess.excludedLetters)
       .filter((letter) => Boolean(letter) && !includedLetters.includes(letter));
 
+    const guesses = this.guesses.concat(guess);
+
     return new WordleAssistant(
       this.wordSize,
       {
@@ -72,7 +74,7 @@ export class WordleAssistant {
         lettersNotInPosition,
         excludedLetters,
         includedLetters,
-        guesses: this.guesses.concat(guess),
+        guesses,
       },
     );
   }
